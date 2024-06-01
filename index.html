@@ -1,0 +1,625 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz App</title>
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        #score-counter {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px;
+            background-color: #333;
+            border-bottom-right-radius: 10px;
+            color: white;
+            z-index: 999;
+        }
+
+        #quiz-container {
+            max-width: 600px;
+            margin: auto;
+            padding: 60px 20px 20px; /* تم تعديل ال padding ليضمن عدم تغطية الصورة */
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            position: relative; /* تمت إضافة position: relative; للسماح لـ #score-counter بالتحكم فيه */
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            color: white;
+            background-color: #2196F3;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        button {
+            background-color: #2196F3;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0c0c0c;
+        }
+
+        #timer {
+            margin-bottom: 10px;
+        }
+
+        #result-container {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .result-text {
+            margin-bottom: 10px;
+        }
+
+        .correct {
+            background-color: green;
+            color: white;
+        }
+
+        .incorrect {
+            background-color: red;
+            color: white;
+        }
+
+        /* CSS for displaying images to fit the screen */
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="score-counter">Score: <span id="score">0</span></div>
+
+    <div id="quiz-container">
+        <img id="question-image" src="" alt="Question Image">
+        <div id="choices"></div>
+        <button onclick="checkAnswer()">Submit Answer</button>
+        <p id="timer"></p>
+    </div>
+
+    <div id="result-container">
+        <h2>Quiz Result</h2>
+        <p class="result-text" id="result"></p>
+        <div id="correct-answers"></div>
+        <button id="retryBtn" style="display: none;" onclick="retryQuiz()">Retry Quiz</button>
+    </div>
+
+    <script>
+        var currentQuestion = 0;
+        var score = 0;
+        var timeLeft = 600; // تحديد عدد الثواني
+        var timerInterval;
+
+        var quizData = [
+
+        {
+        imageSrc: "https://lists.office.com/Images/9188040d-6c67-4c5b-b112-36a304b66dad/00000000-0000-0000-0006-bffd20b2d784/T4DI4B9TPM4A80KQBJTH1SNC1H/99e12e22-4a73-43d2-be90-5d61ffe7f407",
+        choices: ["الحزن", "الاشمئزاز", "الغضب", "الخوف", "السعادة"],
+        correctAnswer: "الغضب"
+    },
+    {
+        imageSrc: "https://lists.office.com/Images/9188040d-6c67-4c5b-b112-36a304b66dad/00000000-0000-0000-0006-bffd20b2d784/T4DI4B9TPM4A80KQBJTH1SNC1H/5a4a7ef9-358b-44dd-b514-b3053f2f07dd",
+        choices: ["الحزن", "الاشمئزاز", "الغضب", "الخوف", "السعادة"],
+        correctAnswer: "السعادة"
+    },
+    {
+        imageSrc: "https://lists.office.com/Images/9188040d-6c67-4c5b-b112-36a304b66dad/00000000-0000-0000-0006-bffd20b2d784/T4DI4B9TPM4A80KQBJTH1SNC1H/2845992c-84c4-4a8f-9cce-70f7d62eb427",
+        choices: ["الحزن", "الاشمئزاز", "الغضب", "الخوف", "السعادة"],
+        correctAnswer: "الخوف"
+    },
+    {
+        imageSrc: "https://lists.office.com/Images/9188040d-6c67-4c5b-b112-36a304b66dad/00000000-0000-0000-0006-bffd20b2d784/T4DI4B9TPM4A80KQBJTH1SNC1H/7fa11117-f054-4008-9ce7-10944d5a63ef",
+        choices: ["الحزن", "الاشمئزاز", "الغضب", "الخوف", "السعادة"],
+        correctAnswer: "الحزن"
+    },
+    {
+        imageSrc: "https://lists.office.com/Images/9188040d-6c67-4c5b-b112-36a304b66dad/00000000-0000-0000-0006-bffd20b2d784/T4DI4B9TPM4A80KQBJTH1SNC1H/e5e07f8b-71e7-4d60-9cb6-631536131312",
+        choices: ["الحزن", "الملل", "الغضب", "الخوف", "السعادة"],
+        correctAnswer: "الملل"
+    },
+    {
+        imageSrc: "https://lists.office.com/Images/9188040d-6c67-4c5b-b112-36a304b66dad/00000000-0000-0000-0006-bffd20b2d784/T4DI4B9TPM4A80KQBJTH1SNC1H/b6ff25a7-e19d-4349-a1a4-9cbe1b6f5f04",
+        choices: ["الحزن", "الملل", "الغضب", "اصغاء", "السعادة"],
+        correctAnswer: "اصغاء"
+    },
+    {
+        imageSrc: "https://lists.office.com/Images/9188040d-6c67-4c5b-b112-36a304b66dad/00000000-0000-0000-0006-bffd20b2d784/T4DI4B9TPM4A80KQBJTH1SNC1H/57ff8f24-e0e0-42d2-a257-c8b7928ffdd9",
+        choices: ["الحزن", "الملل", "الغضب", "انتقاد", "السعادة"],
+        correctAnswer: "انتقاد"
+    },
+    {
+        imageSrc: "https://lists.office.com/Images/9188040d-6c67-4c5b-b112-36a304b66dad/00000000-0000-0000-0006-bffd20b2d784/T4DI4B9TPM4A80KQBJTH1SNC1H/ccf9e2ad-62f4-479f-b9bd-cda1aa370fd2",
+        choices: ["الحزن", "الملل", "الغضب", "حيره", "السعادة"],
+        correctAnswer: "حيره"
+    },
+    {
+        imageSrc: "https://lists.office.com/Images/9188040d-6c67-4c5b-b112-36a304b66dad/00000000-0000-0000-0006-bffd20b2d784/T4DI4B9TPM4A80KQBJTH1SNC1H/cb1a34e7-3955-4e33-9996-c48488d17ba9",
+        choices: ["الحزن", "الملل", "الغضب", "حيره", "السعادة"],
+        correctAnswer: "الحزن"
+    },
+    {
+        imageSrc: "https://lists.office.com/Images/9188040d-6c67-4c5b-b112-36a304b66dad/00000000-0000-0000-0006-bffd20b2d784/T4DI4B9TPM4A80KQBJTH1SNC1H/045af704-adac-46f5-83c6-dc6ed9fa6900",
+        choices: ["الحزن", "الملل", "الغضب", "حيره", "السعادة"],
+        correctAnswer: "السعادة"
+    },
+    {
+        imageSrc: "https://lists.office.com/Images/9188040d-6c67-4c5b-b112-36a304b66dad/00000000-0000-0000-0006-bffd20b2d784/T4DI4B9TPM4A80KQBJTH1SNC1H/7317b5a8-a5cb-43d3-80cd-a3b3f5a6b744",
+        choices: ["الحزن", "الملل", "الغضب", "اثارة", "السعادة"],
+        correctAnswer: "اثارة"
+    },
+    {
+        imageSrc: "https://lists.office.com/Images/9188040d-6c67-4c5b-b112-36a304b66dad/00000000-0000-0000-0006-bffd20b2d784/T4DI4B9TPM4A80KQBJTH1SNC1H/65394e7c-6a2a-45aa-bfae-16ed26deca00",
+        choices: ["الحزن", "الملل", "الغضب", "اثارة", "السعادة"],
+        correctAnswer: "الغضب"
+    },
+    {
+        imageSrc: "https://lists.office.com/Images/9188040d-6c67-4c5b-b112-36a304b66dad/00000000-0000-0000-0006-bffd20b2d784/T4DI4B9TPM4A80KQBJTH1SNC1H/7ce5f676-1ea0-4a2e-8203-15688f7ac117",
+        choices: ["الحزن", "الملل", "الغضب", "مفاجأة", "السعادة"],
+        correctAnswer: "مفاجأة"
+    },
+    {
+        imageSrc: "https://lists.office.com/Images/9188040d-6c67-4c5b-b112-36a304b66dad/00000000-0000-0000-0006-bffd20b2d784/T4DI4B9TPM4A80KQBJTH1SNC1H/9f8303a6-5ea9-4746-b8d1-e513d21c8d26",
+        choices: ["ارتباك", "الملل", "الغضب", "حزن", "السعادة"],
+        correctAnswer: "ارتباك"
+    },
+    {
+        imageSrc: "https://lists.office.com/Images/9188040d-6c67-4c5b-b112-36a304b66dad/00000000-0000-0000-0006-bffd20b2d784/T4DI4B9TPM4A80KQBJTH1SNC1H/d91f8660-ee51-4637-bc7a-6ba961f73fce",
+        choices: ["ارتباك", "الثقة", "الغضب", "حزن", "السعادة"],
+        correctAnswer: "الثقة"
+    },
+    {
+        imageSrc: "https://lists.office.com/Images/9188040d-6c67-4c5b-b112-36a304b66dad/00000000-0000-0000-0006-bffd20b2d784/T4DI4B9TPM4A80KQBJTH1SNC1H/87b9067b-47b5-479b-b105-374feaf098ec",
+        choices: ["الوحدة", "الثقة", "الغضب", "حزن", "السعادة"],
+        correctAnswer: "الوحدة"
+    },
+    {
+        imageSrc: "https://lists.office.com/Images/9188040d-6c67-4c5b-b112-36a304b66dad/00000000-0000-0000-0006-bffd20b2d784/T4DI4B9TPM4A80KQBJTH1SNC1H/3ee88063-76ad-48b4-80a1-ecfbf44a2919",
+        choices: ["الوحدة", "التوقع", "الغضب", "حزن", "السعادة"],
+        correctAnswer: "التوقع"
+    },
+    {
+        imageSrc: "https://lists.office.com/Images/9188040d-6c67-4c5b-b112-36a304b66dad/00000000-0000-0000-0006-bffd20b2d784/T4DI4B9TPM4A80KQBJTH1SNC1H/14f65abe-2a71-4c7a-bb6b-b4dba2375478",
+        choices: ["الوحدة", "التوقع", "الاشمئزاز", "حزن", "السعادة"],
+        correctAnswer: "الاشمئزاز"
+    },
+    {
+        imageSrc: "https://lists.office.com/Images/9188040d-6c67-4c5b-b112-36a304b66dad/00000000-0000-0000-0006-bffd20b2d784/T4DI4B9TPM4A80KQBJTH1SNC1H/ee14cd57-1ead-4a06-ac42-5a7ea491cb9b",
+        choices: ["الوحدة", "المفاجأة", "الاشمئزاز", "حزن", "السعادة"],
+        correctAnswer: "المفاجأة"
+    },
+    {
+        imageSrc: "https://lists.office.com/Images/9188040d-6c67-4c5b-b112-36a304b66dad/00000000-0000-0000-0006-bffd20b2d784/T4DI4B9TPM4A80KQBJTH1SNC1H/199780df-170a-40d5-a095-9613f0e69e31",
+        choices: ["الازدراء والكراهية", "المفاجأة", "الاشمئزاز", "حزن", "السعادة"],
+        correctAnswer: "الازدراء والكراهية"
+    },
+    {
+        imageSrc: "https://lists.office.com/Images/9188040d-6c67-4c5b-b112-36a304b66dad/00000000-0000-0000-0006-bffd20b2d784/T4DI4B9TPM4A80KQBJTH1SNC1H/65781f4d-6397-40bc-95e7-a82a596eb8dd",
+        choices: ["الغضب", "المفاجأة", "الاشمئزاز", "حزن", "السعادة"],
+        correctAnswer: "الغضب"
+    },
+    {
+        imageSrc: "https://lists.office.com/Images/9188040d-6c67-4c5b-b112-36a304b66dad/00000000-0000-0000-0006-bffd20b2d784/T4DI4B9TPM4A80KQBJTH1SNC1H/210b5de7-ce8e-45eb-b81a-57171f22d6d5",
+        choices: ["الغضب", "المفاجأة", "الاشمئزاز", "حزن", "السعادة"],
+        correctAnswer: "حزن"
+    },
+    {
+        imageSrc: "https://lists.office.com/Images/9188040d-6c67-4c5b-b112-36a304b66dad/00000000-0000-0000-0006-bffd20b2d784/T4DI4B9TPM4A80KQBJTH1SNC1H/ef27e3b1-857d-4158-af69-b8453ebf2f4c",
+        choices: ["الغضب", "المفاجأة", "الاشمئزاز", "حزن", "السعادة"],
+        correctAnswer: "الاشمئزاز"
+    },
+    {
+        imageSrc: "https://lists.office.com/Images/9188040d-6c67-4c5b-b112-36a304b66dad/00000000-0000-0000-0006-bffd20b2d784/T4DI4B9TPM4A80KQBJTH1SNC1H/107b58cc-6d37-4879-a015-b5be986a0a66",
+        choices: ["الغضب", "المفاجأة", "الاشمئزاز", "حزن", "اندهاش"],
+        correctAnswer: "اندهاش"
+    },
+    {
+        "question": "أنا عادة أكون أكثر نشاطًا عندما:",
+        "choices": [
+            "أكون مع الآخرين",
+            "أفكر مع نفسي"
+        ],
+        "correctAnswer": "أكون مع الآخرين"
+    },
+    {
+        "question": "حينما تقودني الصدفة إلى لقاءات اجتماعية، فإن نشاطي وحيويتي تزداد:",
+        "choices": [
+            "في نهاية اللقاءات، وقد أكون آخر شخص يغادر",
+            "في بداية اللقاء ثم أشعر بالضجر والملل سريعاً وأرغب بشدة للعودة إلى المنزل."
+        ],
+        "correctAnswer": "في نهاية اللقاءات، وقد أكون آخر شخص يغادر"
+    },
+    {
+        "question": "أي الخيارين التاليين ترتاح معه أكثر:",
+        "choices": [
+            "الذهاب مع الأصدقاء إلى مكان به الكثير من الأشخاص في وجود فرصة للتفاعل معهم مثل الأندية أو الحفلات.",
+            "الجلوس في البيت مع الأصدقاء والقيام بعمل شيء خاص لوحدنا مثل مشاهدة فيديو أو التلفاز أو تناول وجبة عشاء معًا."
+        ],
+        "correctAnswer": "الذهاب مع الأصدقاء إلى مكان به الكثير من الأشخاص في وجود فرصة للتفاعل معهم مثل الأندية أو الحفلات."
+    },
+    {
+        "question": "عندما أكون مع أصدقائي، فإنني:",
+        "choices": [
+            "أتكلم كثيراً حتى أشعر بالراحة معهم، وعندما يأتون محفوظاً، أبدأ بالحديث معهم.",
+            "أكون منصتاً ومحتفظاً، وعندما قدموا لي الفرصة، أبدأ بالحديث معهم."
+        ],
+        "correctAnswer": "أكون منصتاً ومحتفظاً، وعندما قدموا لي الفرصة، أبدأ بالحديث معهم."
+    },
+    {
+        "question": "الطريقة التي تعرفت بها على غالبية أصدقائي:",
+        "choices": [
+            "في الخارج عندما كنت أقوم بإنجاز بعض الأعمال مثل الحفلات أو الأندية أو العمل والنشاطات الترفيهية وغيرها.",
+            "عندما يقدمني أصحابي الحميمين أو أفراد عائلتي لهم."
+        ],
+        "correctAnswer": "في الخارج عندما كنت أقوم بإنجاز بعض الأعمال مثل الحفلات أو الأندية أو العمل والنشاطات الترفيهية وغيرها."
+    },
+    {
+        "question": "لدي:",
+        "choices": [
+            "الكثير من المعارف والأصدقاء.",
+            "القليل من الأصدقاء ولكنهم في غاية التقرب مني."
+        ],
+        "correctAnswer": "الكثير من المعارف والأصدقاء."
+    },
+    {
+        "question": "عادة ما يشاع عني أنني:",
+        "choices": [
+            "كثير الكلام وقليلاً حيال.",
+            "قليل الكلام وأميل للاستماع أكثر."
+        ],
+        "correctAnswer": "قليل الكلام وأميل للاستماع أكثر."
+    },
+    {
+        "question": "أنا أفضل أن أجمع المعلومات عن طريق:",
+        "choices": [
+            "خيالي وتوقعاتي لما يمكن أن يكون.",
+            "إحساسي بالواقع وبالمكان الحالي والزمن الحاضر."
+        ],
+        "correctAnswer": "إحساسي بالواقع وبالمكان الحالي والزمن الحاضر."
+    },
+    {
+        "question": "أنا أثق أكثر:",
+        "choices": [
+            "في إحساسي والحدس وفهم معاني الأمور.",
+            "في الملاحظة الدقيقة والمباشرة للأشياء والتجارب العملية الواقعية."
+        ],
+        "correctAnswer": "في الملاحظة الدقيقة والمباشرة للأشياء والتجارب العملية الواقعية."
+    },
+    {
+        "question": "عندما أكون مع أصدقائي، فأنا أفضل التحدث عن:",
+        "choices": [
+            "المستقبل وكيفية ابتكار الأشياء وتطويرها واحتمالات الحياة؛ مثال: أتحدث عن الاختراعات العلمية الحديثة أو عن أفضل الطرق للتعبير عن مشاعري وأحاسيسي.",
+            "الأمور الواقعية والمادية والعملية (الزمن الحاضر والمكان الحالي)؛ مثال: قد أتحدث عن تفاصيل رحلة جميلة قمت بها أو تفاصيل مالبس أو طعام أو غيره."
+        ],
+        "correctAnswer": "الأمور الواقعية والمادية والعملية (الزمن الحاضر والمكان الحالي)؛ مثال: قد أتحدث عن تفاصيل رحلة جميلة قمت بها أو تفاصيل مالبس أو طعام أو غيره."
+    },
+    {
+        "question": "أنا من الأشخاص الذين يفضلون أن يفهموا:",
+        "choices": [
+            "الصورة الكلية أولاً.",
+            "التفاصيل أولاً."
+        ],
+        "correctAnswer": "الصورة الكلية أولاً."
+    },
+    {
+        "question": "أنا من الأشخاص الذين يفضلون:",
+        "choices": [
+            "العيش في عالم من الخيال والأحلام بدلاً من الواقع.",
+            "التركيز على واقع الأشياء بدلاً من تخيلها."
+        ],
+        "correctAnswer": "التركيز على واقع الأشياء بدلاً من تخيلها."
+    },
+    {
+        "question": "أنا في العادة:",
+        "choices": [
+            "أستطرد دائمًا في وصف الأشياء وذكر كافة التفاصيل.",
+            "لا أميل للمبالغة وأفضل ترك الأمور تسير على طبيعتها."
+        ],
+        "correctAnswer": "أستطرد دائمًا في وصف الأشياء وذكر كافة التفاصيل."
+    },
+    {
+        "question": "في علاقاتي مع الآخرين، فأنا أستطيع:",
+        "choices": [
+            "أن أتوافق عاطفيًا، كما أني أمتلك القدرة على التعبير عن مشاعري وأحاسيسي دون تفكير.",
+            "أن أتوافق عقليًا، كما أني أمتلك القدرة على التواصل الفطري والنقاش بصورة منطقية ومتزنة."
+        ],
+        "correctAnswer": "أن أتوافق عقليًا، كما أني أمتلك القدرة على التواصل الفطري والنقاش بصورة منطقية ومتزنة."
+    },
+    {
+        "question": "غالبية قراراتي تعتمد على:",
+        "choices": [
+            "عواطفي بشكل أساسي (ما أحب أو أكره) وأحيانًا العقل والمنطق.",
+            "عقلي في المقام الأول وأحيانًا بعضًا من عواطفي."
+        ],
+        "correctAnswer": "عقلي في المقام الأول وأحيانًا بعضًا من عواطفي."
+    },
+    {
+        "question": "يمكنني أن أقول أن شعوري أقوى تجاه:",
+        "choices": [
+            "احتياج الآخرين للدعم وللتعاطف.",
+            "خروج الآخرين عن لغة المنطق والعقل."
+        ],
+        "correctAnswer": "احتياج الآخرين للدعم وللتعاطف."
+    },
+    {
+        "question": "عندما أقطع عالقتي مع أحد أصدقائي أو معارفي، فإنني:",
+        "choices": [
+            "أترك لمشاعري العنان وأجد قطع العالقة شيئاً صعبًا ومؤلمًا.",
+            "عندما أقرر ذلك، فأنا أقطع العالقة بدون تردد رغم أن ذلك قد يضايقني."
+        ],
+        "correctAnswer": "عندما أقرر ذلك، فأنا أقطع العالقة بدون تردد رغم أن ذلك قد يضايقني."
+    },
+    {
+        "question": "عندما يحدث اختلاف في وجهات النظر بيني وبين أحد أصدقائي، فأنا",
+        "choices": [
+            "أبذل كل ما استطيع حتى لا أجرح مشاعره، ولا أتفوه بأي كلمة من شأنها أن تؤذي مشاعره.",
+            "أعبر عن رأيي فيه بصراحة وبطريقة مباشرة لأني على يقين أن الحق حق."
+        ],
+        "correctAnswer": "أعبر عن رأيي فيه بصراحة وبطريقة مباشرة لأني على يقين أن الحق حق."
+    },
+    {
+        "question": "غالبية الناس من حولي يميلون إلى الاعتقاد بأني:",
+        "choices": [
+            "حساس ودافئ المشاعر.",
+            "منطقي وصريح في كلامي."
+        ],
+        "correctAnswer": "منطقي وصريح في كلامي."
+    },
+    {
+        "question": "أنا أرى أن غالبية خلافاتي ونقاشي مع الآخرين يحدث:",
+        "choices": [
+            "بصورة ودية.",
+            "بصورة يغلب عليها الطابع العقلي والرغبة في إثبات أني على حق."
+        ],
+        "correctAnswer": "بصورة ودية."
+    },
+    {
+        "question": "إذا كان لدي مال ووقت ودعاني صديق للسفر معه، فأنا في العادة",
+        "choices": [
+            "أراجع جدول أعمالي أولاً وأفكر في التزاماتي قبل اتخاذ قرار السفر.",
+            "أحزم حقائبي فورًا وأسافر معه بدون تفكير."
+        ],
+        "correctAnswer": "أراجع جدول أعمالي أولاً وأفكر في التزاماتي قبل اتخاذ قرار السفر."
+    },
+    {
+        "question": "هل تشعر بالممل أثناء العمل",
+        "choices": [
+            "نعم",
+            "لا",
+            "أحيانًا",
+            "لا أعاني من هذا الشعور"
+        ],
+        "correctAnswer": "لا أعاني من هذا الشعور"
+    },
+    {
+        "question": "كيف ستتصرف إذا نشبت مشاجرة بينك وبين أحد زملائك في العمل",
+        "choices": [
+            "ستصرخ على زميلك وتخبره أنه مخطئ.",
+            "ستترك زميلك وتذهب إلى رئيسك في العمل.",
+            "ستحاول التحدث مع زميلك بهدوء لفهم وجهة نظره.",
+            "ستطلب من زميلك الخروج لتناول القهوة."
+        ],
+        "correctAnswer": "ستحاول التحدث مع زميلك بهدوء لفهم وجهة نظره."
+    },
+    {
+        "question": "كيف ستتصرف إذا تعرضت للاضطهاد من قبل مديرك بسبب غيرته منك",
+        "choices": [
+            "ستستقيل من العمل.",
+            "ستواجه مديرك مباشرة.",
+            "ستتحدث مع شخص تثق به عن المشكلة.",
+            "ستجمع أدلة على اضطهادك وتقدم شكوى رسمية."
+        ],
+        "correctAnswer": "ستجمع أدلة على اضطهادك وتقدم شكوى رسمية."
+    },
+    {
+        "question": "كيف ستتصرف كمعلم إذا تأخر أحد الطلاب يومياً",
+        "choices": [
+            "ستتجاهل الأمر.",
+            "ستتحدث إلى الطالب بشكل خاص.",
+            "ستعاقب الطالب.",
+            "ستتصل بوالدي الطالب."
+        ],
+        "correctAnswer": "ستتحدث إلى الطالب بشكل خاص."
+    },
+    {
+        "question": "هل تعتقد أن البيئة الاجتماعية تؤثر على سلوك الإنسان",
+        "choices": [
+            "أوافق بشدة",
+            "أوافق",
+            "محايد",
+            "أرفض",
+            "أرفض بشدة"
+        ],
+        "correctAnswer": "أوافق بشدة"
+    },
+    {
+        "question": "هل تلاحظ تغيرات في سلوكك بناءً على المواقف والظروف المختلفة",
+        "choices": [
+            "أوافق بشدة",
+            "أوافق",
+            "محايد",
+            "أرفض",
+            "أرفض بشدة"
+        ],
+        "correctAnswer": "أوافق"
+    },
+    {
+        "question": "هل تشعر بالسعادة عندما ترى تأثيرك على مستوى الأطفال",
+        "choices": [
+            "أوافق",
+            "أحيانًا",
+            "لا أوافق"
+        ],
+        "correctAnswer": "أوافق"
+  
+    },
+
+ 
+        ];
+
+        // قم بترتيب الأسئلة بشكل عشوائي
+        shuffleArray(quizData);
+
+        function shuffleArray(array) {
+            for (var i = array.length - 1; i > 0; i--) {
+                var j = Math.floor(Math.random() * (i + 1));
+                var temp = array[i];
+                array[i] = array[j];
+                array[j] = temp;
+            }
+            return array;
+        }
+
+        function loadQuestion() {
+            var currentQuiz = quizData[currentQuestion];
+
+            var questionImageElement = document.getElementById('question-image');
+            var choicesElement = document.getElementById('choices');
+
+            if (currentQuiz.imageSrc) {
+                questionImageElement.src = currentQuiz.imageSrc; // تعيين مصدر الصورة
+                questionImageElement.style.display = 'block'; // عرض الصورة
+            } else {
+                questionImageElement.style.display = 'none'; // إخفاء الصورة إذا لم تكن متاحة
+            }
+
+            choicesElement.innerHTML = '';
+
+            // عرض السؤال كنص عادي إذا لم يكن هناك صورة
+            if (!currentQuiz.imageSrc) {
+                choicesElement.innerHTML += '<p>' + currentQuiz.question + '</p>';
+            }
+
+            for (var i = 0; i < currentQuiz.choices.length; i++) {
+                var choice = currentQuiz.choices[i];
+                choicesElement.innerHTML += '<label><input type="radio" name="choice" value="' + choice + '"> ' + choice + '</label>';
+            }
+
+            startTimer(); // بدء الموقت عند تحميل كل سؤال
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(function () {
+                document.getElementById('timer').innerHTML = 'Time Left: ' + timeLeft + 's';
+
+                if (timeLeft === 0) {
+                    clearInterval(timerInterval);
+                    alert('Time is up!'); // عرض رسالة انتهاء الوقت
+                    showResult(); // عرض النتيجة النهائية عند انتهاء الوقت
+                } else {
+                    timeLeft--;
+                }
+            }, 1000);
+        }
+
+        function checkAnswer() {
+            var selectedOption = document.querySelector('input[name="choice"]:checked');
+            if (!selectedOption) {
+                alert('Please select an answer.');
+                return;
+            }
+
+            var userAnswer = selectedOption.value;
+            var currentQuiz = quizData[currentQuestion];
+
+            var choicesLabels = document.querySelectorAll('label');
+
+            for (var i = 0; i < choicesLabels.length; i++) {
+                if (currentQuiz.correctAnswer === currentQuiz.choices[i]) {
+                    choicesLabels[i].classList.add('correct');
+                } else {
+                    choicesLabels[i].classList.add('incorrect');
+                }
+            }
+
+            if (userAnswer === currentQuiz.correctAnswer) {
+                score++;
+                document.getElementById('score').textContent = score;
+            }
+
+            clearInterval(timerInterval); // قبل التحقق من الإجابة، قم بإيقاف الموقت
+
+            currentQuestion++;
+
+            if (currentQuestion < quizData.length) {
+                setTimeout(function () {
+                    loadQuestion();
+                    resetColors();
+                }, 3000);
+            } else {
+                showResult();
+            }
+        }
+
+        function showResult() {
+            var resultElement = document.getElementById('result');
+            var correctAnswersElement = document.getElementById('correct-answers');
+
+            resultElement.innerHTML = 'Your Score: ' + score + ' out of ' + quizData.length;
+
+            correctAnswersElement.innerHTML = '<h3>Correct Answers:</h3>';
+            for (var i = 0; i < quizData.length; i++) {
+                var q = quizData[i];
+                var imgSrc = q.imageSrc;
+                var imgElement = '<img src="' + imgSrc + '" alt="Question Image">';
+                correctAnswersElement.innerHTML += imgElement + '<strong>Q: ' + q.question + '</strong><br>A: ' + q.correctAnswer + '<br>';
+            }
+
+            document.getElementById('result-container').style.display = 'block';
+            document.getElementById('retryBtn').style.display = 'block';
+        }
+
+        function resetColors() {
+            var choicesLabels = document.querySelectorAll('label');
+            for (var i = 0; i < choicesLabels.length; i++) {
+                choicesLabels[i].classList.remove('correct', 'incorrect'); // إزالة الأنماط المضافة سابقًا
+            }
+        }
+
+        function retryQuiz() {
+            currentQuestion = 0;
+            score = 0;
+            timeLeft = 600; // إعادة تعيين الوقت للقيمة الأصلية
+
+            // قم بترتيب الأسئلة بشكل عشوائي عند إعادة المحاولة
+            shuffleArray(quizData);
+
+            document.getElementById('score').textContent = score; // تحديث قيمة العداد إلى الصفر
+            loadQuestion();
+            resetColors();
+
+            document.getElementById('result-container').style.display = 'none';
+            document.getElementById('retryBtn').style.display = 'none';
+        }
+
+        loadQuestion();
+    </script>
+
+</body>
+
+</html>
